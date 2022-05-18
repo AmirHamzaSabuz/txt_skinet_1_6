@@ -1,0 +1,109 @@
+API/Dtos/ProductToReturnDto.cs
+appsettings.Development.json
+Helpers/ProductUrlResolver.cs
+Helpers/MappingProfiles.cs
+
+
+
+
+
+API/Dtos/ProductToReturnDto.cs => after
+
+	namespace API.Dtos
+	{
+		public class ProductToReturnDto
+		{
+			public int Id {get;set;}
+			public string Name {get; set;}
+			public string Description {get; set;}
+			public decimal Price {get; set;}
+			public string PictureUrl {get; set;}
+			public string ProductType {get; set;}
+			public string ProductBrand {get; set;}
+
+		}
+	}
+
+=====
+
+press F1 =>
+ 
+nugate package manager => 
+
+AutoMapper.Extensions.Microsoft.DependencyInjection
+
+=> 8.0.1
+
+=> API
+
+=======
+
+appsettings.Development.json => after 
+
+	{
+	  "Logging": {
+		"LogLevel": {
+		  "Default": "Information",
+		  "Microsoft": "Warning",
+		  "Microsoft.Hosting.Lifetime": "Information"
+		}
+	  },
+	  "ConnectionStrings":{
+		"DefaultConnection": "Data source=skinet.db"
+	  },
+	  "ApiUrl": "https://localhost:5001/"
+	}
+
+
+
+
+Helpers/ProductUrlResolver.cs => after 
+
+	using API.Dtos;
+	using AutoMapper;
+	using Core.Entities;
+	using Microsoft.Extensions.Configuration;
+
+	namespace API.Helpers
+	{
+		public class ProductUrlResolver : IValueResolver<Product, ProductToReturnDto, string>
+		{
+			private readonly IConfiguration _config;
+			public ProductUrlResolver(IConfiguration config)
+			{
+				_config = config;
+
+			}
+
+			public string Resolve(Product source, ProductToReturnDto destination, string destMember, ResolutionContext context)
+			{
+				if(!string.IsNullOrEmpty(source.PictureUrl))
+				{
+					return _config["ApiUrl"] + source.PictureUrl;
+				}
+				return null;
+			}
+		}
+	}
+
+
+
+Helpers/MappingProfiles.cs => after 
+
+	using API.Dtos;
+	using AutoMapper;
+	using Core.Entities;
+
+	namespace API.Helpers
+	{
+		public class MappingProfiles : Profile
+		{
+			public MappingProfiles()
+			{
+				CreateMap<Product, ProductToReturnDto>()
+				.ForMember(d => d.ProductBrand, o => o.MapFrom(s => s.ProductBrand.Name))
+				.ForMember(d => d.ProductType, o => o.MapFrom(s => s.ProductType.Name))
+				.ForMember(d => d.PictureUrl, o => o.MapFrom<ProductUrlResolver>());
+			}
+		}
+	}
