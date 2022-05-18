@@ -1,0 +1,581 @@
+1.	StoreContext.cs
+2.	Core/Specifications/ISpecification.cs
+3.	BaseSpecification.cs
+4.	SpecificationEvaluator.cs
+
+5.	IGenericRepository.cs
+6.	GenericRepository.cs
+7.	Helpers/Pagination.cs
+8.	Core/Specifications/ProductSpecParams.cs
+
+9.	ProductsWithTypesAndBrandsSpecification.cs
+10.	Core/Specifications/ProductWithFiltersForCountSpecification.cs
+11.	ProductsController.cs
+12.	Startup.cs
+
+
+StoreContext.cs => after 
+
+	using System.Linq;
+	using System.Reflection;
+	using Core.Entities;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace Infrastructure.Data
+	{
+		public class StoreContext : DbContext
+		{
+			public StoreContext(DbContextOptions<StoreContext> options) : base(options)
+			{
+			}
+			
+			public DbSet<Product> Products { get; set; }
+			public DbSet<ProductBrand> ProductBrands { get; set; }
+			public DbSet<ProductType> ProductTypes { get; set; }
+			
+			
+			protected override void OnModelCreating(ModelBuilder modelBuilder)
+			{
+			
+			
+				base.OnModelCreating(modelBuilder);
+				modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+				
+				
+				
+
+				if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+				{
+					//var entityTypes = modelBuilder.Model.GetEntityTypes()
+					//foreach (var entityType in entityTypes)
+					foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+					{
+						var properties = entityType.ClrType.GetProperties().Where(p => p.PropertyType == typeof(decimal));
+
+						foreach(var property in properties)
+						{
+							modelBuilder.Entity(entityType.Name).Property(property.Name).HasConversion<double>();
+
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+// CLEAR 15 April 2022
+
+Core/Specifications/ISpecification.cs => after 
+
+	using System;
+	using System.Collections.Generic;
+	using System.Linq.Expressions;
+
+	namespace Core.Specifications
+	{
+		public interface ISpecification<T>
+		{
+			Expression<Func<T, bool>> Criteria { get; }
+			List<Expression<Func<T, object>>> Includes { get; }
+			Expression<Func<T, object>> OrderBy { get; }
+			Expression<Func<T, object>> OrderByDescending { get; }
+			
+			int Take {get;}
+			int Skip {get;}
+			bool IsPagingEnabled{get;}
+			
+		}
+	}
+
+
+// CLEAR 26 SEP 2021
+
+Core/Specifications/BaseSpecification.cs => after 
+
+	using System;
+	using System.Collections.Generic;
+	using System.Linq.Expressions;
+
+	namespace Core.Specifications
+	{
+		public class BaseSpecification<T> : ISpecification<T>
+		{
+			public BaseSpecification()
+			{
+
+			}
+			public BaseSpecification(Expression<Func<T, bool>> criteria)
+			{
+				Criteria = criteria;
+
+			}
+						
+			public Expression<Func<T, bool>> Criteria { get; }
+			
+			public List<Expression<Func<T, object>>> Includes { get; } = new List<Expression<Func<T, object>>>();
+			
+			
+
+			public Expression<Func<T, object>> OrderBy { get; private set; }
+
+			public Expression<Func<T, object>> OrderByDescending { get; private set; }
+			
+
+			
+			public int Take { get; private set; }
+
+			public int Skip { get; private set; }
+
+			public bool IsPagingEnabled { get; private set; }
+			
+			
+			
+			
+
+			protected void AddInclude(Expression<Func<T, object>> includeExpression)
+			{
+				Includes.Add(includeExpression);
+			}
+			protected void AddOrderBy(Expression<Func<T, object>> orderByExpression)
+			{
+				OrderBy = orderByExpression;
+			}
+			protected void AddOrderByDescending(Expression<Func<T, object>> orderByDescExpression)
+			{
+				OrderByDescending = orderByDescExpression;
+			}
+			
+			
+			
+			
+
+			protected void ApplyPaging(int skip, int take)
+			{
+				Skip = skip;
+				Take = take;
+				IsPagingEnabled = true;
+			}
+
+		}
+	}
+
+// CLEAR 26 SEP 2021, 15 May 2022
+
+Read BaseEntity.cs from All-3
+
+Infrastructure/Data/SpecificationEvaluator.cs => after 
+
+	using System.Linq;
+	using Core.Entities;
+	using Core.Specifications;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace Infrastructure.Data
+	{
+		public class SpecificationEvaluator<TEntity> where TEntity : BaseEntity
+		{
+			public static IQueryable<TEntity> GetQuery(IQueryable<TEntity> inputQuery, ISpecification<TEntity> spec)
+
+			{
+				var query = inputQuery;
+				if (spec.Criteria != null)
+				{
+					query = query.Where(spec.Criteria);
+				}
+
+				if (spec.OrderBy != null)
+				{
+					query = query.OrderBy(spec.OrderBy);
+				}
+
+				if (spec.OrderByDescending != null)
+				{
+					query = query.OrderByDescending(spec.OrderByDescending);
+				}
+
+				if (spec.IsPagingEnabled)
+				{
+					query = query.Skip(spec.Skip).Take(spec.Take);
+				}
+
+				query = spec.Includes.Aggregate(query, (current, include) => current.Include(include));
+				return query;
+			}
+		}
+	}	
+
+// clear 16 May 2022
+
+
+
+2nd Step
+=======
+
+
+Core/Interfaces/IGenericRepository.cs => after 	
+
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Core.Specifications;
+
+	namespace Core.Interfaces
+	{
+		public interface IGenericRepository<T> where T : BaseEntity
+		{
+			Task<T> GetByIdAsync(int id);
+			Task<IReadOnlyList<T>> ListAllAsync();
+
+
+			Task<T> GetEntityWithSpec(ISpecification<T> spec);
+			Task<IReadOnlyList<T>> ListAsync(ISpecification<T> spec);
+			Task<int> CountAsync(ISpecification<T> spec);
+		}
+	}
+
+
+Infrastructure/Data/GenericRepository.cs => after 
+
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Core.Interfaces;
+	using Core.Specifications;
+	using Microsoft.EntityFrameworkCore;
+	namespace Infrastructure.Data
+	{
+		public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
+		{
+			private readonly StoreContext _context;
+			public GenericRepository(StoreContext context)
+			{
+				_context = context;
+			}
+			
+			
+			public async Task<T> GetByIdAsync(int id)
+			{
+				return await _context.Set<T>().FindAsync(id);
+			}
+
+			public async Task<IReadOnlyList<T>> ListAllAsync()
+			{
+				return await _context.Set<T>().ToListAsync();
+			}
+
+			public async Task<T> GetEntityWithSpec(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).FirstOrDefaultAsync();
+			}
+
+			public async Task<IReadOnlyList<T>> ListAsync(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).ToListAsync();
+			}
+
+			public async Task<int> CountAsync(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).CountAsync();
+			}
+
+			private IQueryable<T> ApplySpecification(ISpecification<T> spec)
+			{
+				return SpecificationEvaluator<T>.GetQuery(_context.Set<T>().AsQueryable(), spec);
+
+			}
+
+
+		}
+	}
+
+
+Helpers/Pagination.cs => 
+
+	using System.Collections.Generic;
+
+	namespace API.Helpers
+	{
+		public class Pagination<T> where T : class
+		{
+			public Pagination(int pageIndex, int pageSize, int count, IReadOnlyList<T> data)
+			{
+				PageIndex = pageIndex;
+				PageSize = pageSize;
+				Count = count;
+				Data = data;
+			}
+
+			public int PageIndex { get; set; }
+			public int PageSize { get; set; }
+			public int Count { get; set; }
+			public IReadOnlyList<T> Data { get; set; }
+		}
+	}
+
+Specifications/ProductSpecParams.cs => after 
+
+	namespace Core.Specifications
+	{
+		public class ProductSpecParams
+		{
+			private const int MaxPageSize = 50;
+			public int PageIndex { get; set; } = 1;
+			private int _pageSize = 6;
+			public int PageSize
+			{
+				get => _pageSize;
+				set => _pageSize = (value > MaxPageSize) ? MaxPageSize : value;
+			}
+			public int? BrandId { get; set; }
+			public int? TypeId { get; set; }
+			public string Sort { get; set; }
+			private string _search;
+			public string Search
+			{
+				get => _search;
+				set => _search = value.ToLower();
+			}
+
+		}
+	}	
+
+
+3rd step
+========
+
+
+
+Read Product.cs from All-3. ProductType, ProductBrand, ProductBrandId, ProductTypeId, Name, Price, Id   
+Read BaseSpecification.cs from All-6. AddInclude, AddOrderBy, AddOrderByDescending, ApplyPaging 
+Read ProductSpecParams.cs from All-6. Search, BrandId, TypeId, PageSize, PageIndex, Sort
+
+Specifications/ProductsWithTypesAndBrandsSpecification.cs => after 
+
+	using Core.Entities;
+
+	namespace Core.Specifications
+	{
+		public class ProductsWithTypesAndBrandsSpecification : BaseSpecification<Product>
+		{
+			public ProductsWithTypesAndBrandsSpecification(ProductSpecParams productParams)
+			: base(x =>
+				(string.IsNullOrEmpty(productParams.Search) || x.Name.ToLower().Contains(productParams.Search)) &&
+				(!productParams.BrandId.HasValue || x.ProductBrandId == productParams.BrandId) &&
+				(!productParams.TypeId.HasValue || x.ProductTypeId == productParams.TypeId)
+			)
+			{
+				AddInclude(x => x.ProductType);
+				AddInclude(x => x.ProductBrand);
+				AddOrderBy(x => x.Name);
+				ApplyPaging(productParams.PageSize * (productParams.PageIndex - 1), productParams.PageSize);
+
+				if (!string.IsNullOrEmpty(productParams.Sort))
+				{
+					switch (productParams.Sort)
+					{
+						case "priceAsc":
+							AddOrderBy(p => p.Price);
+							break;
+						case "priceDesc":
+							AddOrderByDescending(p => p.Price);
+							break;
+						default:
+							AddOrderBy(nameof => nameof.Name);
+							break;
+					}
+				}
+			}
+
+			public ProductsWithTypesAndBrandsSpecification(int id) : base(x => x.Id == id)
+			{
+				AddInclude(x => x.ProductType);
+				AddInclude(x => x.ProductBrand);
+			}
+		}
+	}	
+
+Read Product.cs from All-3.  ProductBrandId, ProductTypeId,
+Read BaseSpecification.cs from All-6. 
+Read ProductSpecParams.cs from All-6. Search, BrandId, TypeId, 
+	
+
+Specifications/ProductWithFiltersForCountSpecification.cs => after 
+
+	using Core.Entities;
+
+	namespace Core.Specifications
+	{
+		public class ProductWithFiltersForCountSpecification : BaseSpecification<Product>
+		{
+			public ProductWithFiltersForCountSpecification(ProductSpecParams productParams)
+			: base(x =>
+				(string.IsNullOrEmpty(productParams.Search) || x.Name.ToLower().Contains(productParams.Search)) &&
+				(!productParams.BrandId.HasValue || x.ProductBrandId == productParams.BrandId) &&
+				(!productParams.TypeId.HasValue || x.ProductTypeId == productParams.TypeId)
+			)
+			{
+
+			}
+		}
+	}	
+
+ProductsController.cs => after 
+
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Threading.Tasks;
+	using API.Dtos;
+	using API.Errors;
+	using API.Helpers;
+	using AutoMapper;
+	using Core.Entities;
+	using Core.Interfaces;
+	using Core.Specifications;
+	using Infrastructure.Data;
+	using Microsoft.AspNetCore.Http;
+	using Microsoft.AspNetCore.Mvc;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace API.Controllers
+	{
+
+		public class ProductsController : BaseApiController
+		{
+			private readonly IGenericRepository<Product> _productsRepo;
+			private readonly IGenericRepository<ProductType> _productTypeRepo;
+			private readonly IGenericRepository<ProductBrand> _productBrandRepo;
+			private readonly IMapper _mapper;
+
+			public ProductsController(	IGenericRepository<Product> productsRepo, 
+							IGenericRepository<ProductBrand> productBrandRepo, 
+							IGenericRepository<ProductType> productTypeRepo, 
+							IMapper mapper)
+			{
+				_mapper = mapper;
+				_productTypeRepo = productTypeRepo;
+				_productsRepo = productsRepo;
+				_productBrandRepo = productBrandRepo;
+
+			}
+
+			// GET: api/Products      
+			[HttpGet]
+			public async Task<ActionResult<Pagination<ProductToReturnDto>>> GetProducts(
+				[FromQuery] ProductSpecParams productParams)
+			{
+				var spec = new ProductsWithTypesAndBrandsSpecification(productParams);
+				var countSpec = new ProductWithFiltersForCountSpecification(productParams);
+				var totalItems = await _productsRepo.CountAsync(countSpec);
+				var products = await _productsRepo.ListAsync(spec);
+				var data = _mapper.Map<IReadOnlyList<Product>, IReadOnlyList<ProductToReturnDto>>(products);
+				return Ok(new Pagination<ProductToReturnDto>(productParams.PageIndex, productParams.PageSize, totalItems, data));
+			}
+
+			// GET: api/Products/5
+			[HttpGet("{id}")]
+			[ProducesResponseType(StatusCodes.Status200OK)]
+			[ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+			public async Task<ActionResult<ProductToReturnDto>> GetProduct(int id)
+			{
+				var spec = new ProductsWithTypesAndBrandsSpecification(id);
+				var product = await _productsRepo.GetEntityWithSpec(spec);
+
+				if (product == null)
+				{
+					return NotFound(new ApiResponse(404));
+				}
+				return _mapper.Map<Product, ProductToReturnDto>(product);
+			}
+
+			[HttpGet("brands")]
+			public async Task<ActionResult<IReadOnlyList<ProductBrand>>> GetProductBrands()
+			{
+				return Ok(await _productBrandRepo.ListAllAsync());
+			}
+
+			[HttpGet("types")]
+			public async Task<ActionResult<IReadOnlyList<ProductType>>> GetProductTypes()
+			{
+				return Ok(await _productTypeRepo.ListAllAsync());
+			}
+		}
+	}
+
+
+Startup.cs => after 
+
+	using API.Extensions;
+	using API.Helpers;
+	using API.Middleware;
+	using AutoMapper;
+	using Infrastructure.Data;
+	using Microsoft.AspNetCore.Builder;
+	using Microsoft.AspNetCore.Hosting;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.Extensions.Configuration;
+	using Microsoft.Extensions.DependencyInjection;
+
+	namespace API
+	{
+		public class Startup
+		{
+			public Startup(IConfiguration configuration)
+			{
+				Configuration = configuration;
+			}
+
+			public IConfiguration Configuration { get; }
+
+			// This method gets called by the runtime. Use this method to add services to the container.
+			public void ConfigureServices(IServiceCollection services)
+			{
+
+				services.AddControllers();
+
+				services.AddDbContext<StoreContext>(x => x.UseSqlite(Configuration.GetConnectionString("DefaultConnection")));
+
+				services.AddAutoMapper(typeof(MappingProfiles));
+
+				services.AddApplicationServices();
+
+				services.AddSwaggerDocumentation();
+
+				services.AddCors(opt =>
+				{
+					opt.AddPolicy("CorsPolicy", policy =>
+					{
+						policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("https://localhost:4200");
+					});
+				});
+
+			}
+
+			// This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+			public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+			{
+				app.UseMiddleware<ExceptionMiddleware>();
+
+				app.UseStatusCodePagesWithReExecute("/errors/{0}");
+
+				app.UseHttpsRedirection();
+
+				app.UseRouting();
+
+				app.UseStaticFiles();
+
+				app.UseAuthorization();
+
+				app.UseCors("CorsPolicy");
+
+				app.UseSwaggerDocumentation();
+
+
+				app.UseEndpoints(endpoints =>
+				{
+					endpoints.MapControllers();
+				});
+			}
+		}
+	}
