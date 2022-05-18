@@ -1,0 +1,42 @@
+Core => delete class1.cs 
+Infrastructure => delete class1.cs 
+
+=============================
+
+=====
+(No need) Don't do
+to trust the certificate on the platform
+cmd => 
+	dotnet dev-certs https -t
+==========
+Saaf => cmd => 
+	cd API
+===
+API => cmd =>
+	dotnet watch run
+======
+
+https://localhost:5001/weatherforecast
+
+ctrl +c
+
+cd ..
+
+cmd => Saaf => 
+
+Save all
+
+=============
+git add .
+git commit -m "Delete class1 from Core and Infrastructure"
+git push 
+
+==================================================================
+
+If wrong git push
+
+cmd => Saaf => git reset --hard <previous number>
+
+	git reset --hard 531a99f1a7be0e84eef613a170209fdcdc0cbdf1
+	git push --force
+

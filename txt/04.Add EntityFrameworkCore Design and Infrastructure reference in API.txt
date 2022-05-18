@@ -1,0 +1,76 @@
+press F1 =>
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore.Design =>
+	Version="5.0.0-preview.8.20407.4 =>
+	{root}\API\API.csproj 
+===
+terminal => HamzaSkinet5.0 => cmd => 
+	cd API 
+API =>  cmd =>
+	dotnet add reference ../Infrastructure
+	cd ..
+
+===
+API.csproj => after 
+	<Project Sdk="Microsoft.NET.Sdk.Web">
+	  <PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	  </PropertyGroup>
+	  <ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.0-preview.8.20407.4" />
+	  </ItemGroup>
+	  <ItemGroup>
+		<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+	  </ItemGroup>
+	</Project>
+	
+===
+
+or
+
+API.csproj => after
+
+	<Project Sdk="Microsoft.NET.Sdk.Web">
+	  <PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+	  </PropertyGroup>
+	  <ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.0" NoWarn="NU1605" />
+		<PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.0" NoWarn="NU1605" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.1" />
+	  </ItemGroup>
+	  <ItemGroup>
+		<ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+	  </ItemGroup>
+	</Project>
+===
+	
+cmd => Saaf => 
+
+Save all
+
+
+Saaf => cmd => 
+	dotnet restore	
+	
+cmd => Saaf => 
+
+Save all
+
+=============
+git add .
+git commit -m "Add EntityFrameworkCore Design and Infrastructure reference in API"
+git push
+
+=====================
+
+If wrong git push then 
+
+cmd => Saaf => git reset --hard <previous number>
+
+	git reset --hard 6b7a1a5e0e1c2df9a525aae1531b3dc95c9099a0
+	git push --force
+	
+==================
+	
