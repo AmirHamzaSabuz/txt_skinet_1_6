@@ -1,0 +1,62 @@
+
+Core.csproj => before 
+
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+	  </PropertyGroup>
+	</Project>
+	
+===	
+	
+Core.csproj => after 
+
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	  </PropertyGroup>
+	</Project>
+	
+======================
+
+Infrastructure.csproj => before 
+
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>net5.0</TargetFramework>
+	  </PropertyGroup>
+	</Project>
+	
+===
+
+Infrastructure.csproj => after 
+
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	  </PropertyGroup>
+	</Project>
+
+======================	
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+git add .
+git commit -m "Change Target Framework of Class Libraries"
+git push -u origin main
+
+
+========================================
+
+If wrong git push then 
+
+cmd => Saaf => git reset --hard <previous number>
+
+	git reset --hard 6b7a1a5e0e1c2df9a525aae1531b3dc95c9099a0
+	git push --force
+	
+	

@@ -1,0 +1,95 @@
+Sectoin 02 API Basics
+
+1.API_Core_Infrastructure
+2.Change TargetFramework of ClassLibraries
+3.Add EntityFrameworkCore, Sqlite, Tools and Core reference in Infrastructure
+
+4.Add EntityFrameworkCore Design and Infrastructure reference in API
+5.Delete class1 from Core and Infrastructure
+6.launchBrowser changed to false in API of launchSettings
+
+7.Create Products Controller
+8.created Core_Entities_Product.cs and Infrastructure_Data_StoreContext.cs
+9.ConnectionStrings
+
+10.services.AddDbContext
+11.Migration and Database
+12.Insert data into database table
+
+13.Reading the data from the Database in the API
+
+My Part 1
+====================================
+
+github => make a new repository
+
+DotNetCore_Angular10_ECommerce_KS_Friends_Chemical_Saaf
+
+==========================================
+
+cmd => workingSpace =>  
+	mkdir Saaf
+	cd Saaf
+
+Saaf => make a new file named .gitignore
+
+.gitignore
+
+	.vscode
+	obj
+	bin
+	
+	*.db
+	*.rdb
+	publish
+	
+	appsettings.json
+	settings.json
+	wwwroot
+	.idea 
+
+
+	*.code-workspace
+
+	# Local History for Visual Studio Code
+	.history/
+
+===
+
+.gitignore file must be created before code . and  git init 
+
+===	
+	code .
+
+==============
+	
+cmd => Saaf => 
+	git init
+	
+	dotnet new sln
+	
+	dotnet new webapi -o API		
+	dotnet sln add API
+ 	
+	dotnet new classlib -o Core
+	dotnet sln add Core
+	
+	dotnet new classlib -o Infrastructure
+	dotnet sln add Infrastructure 
+	
+==================
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+	git add .
+	git commit -m "create a webapi named API and create two class libraries named Core and Infratructure"
+	git branch -M main
+	git remote add origin https://github.com/AmirHamzaSabuz/DotNetCore_Angular10_ECommerce_KS_Friends_Chemical_Saaf_2.git
+	git push -u origin main
+	
+	
+	

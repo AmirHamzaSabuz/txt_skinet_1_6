@@ -1,0 +1,120 @@
+press F1 =>
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore =>
+	Version="5.0.0-preview.8.20407.4 =>
+	{root}\Infrastructure\Infrastructure.csproj
+===	
+
+or
+
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore =>
+	Version="5.0.1 =>
+	{root}\Infrastructure\Infrastructure.csproj
+
+=======================
+
+press F1 =>
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore.Sqlite =>
+	Version="5.0.0-preview.8.20407.4 =>
+	{root}\Infrastructure\Infrastructure.csproj
+===
+
+or 
+
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore.Sqlite =>
+	Version="5.0.1=>
+	{root}\Infrastructure\Infrastructure.csproj
+	
+=======================	
+
+press F1 =>
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore.Tools =>
+	Version="5.0.0-preview.8.20407.4 =>
+	{root}\Infrastructure\Infrastructure.csproj
+===
+or
+
+	nuget package manager => 
+	Microsoft.EntityFrameworkCore.Tools =>
+	Version="5.0.1 =>
+	{root}\Infrastructure\Infrastructure.csproj
+
+==========================
+
+terminal => HamzaSkinet5.0 => cmd => 
+	cd Infrastructure 
+Infrastructure => cmd => 
+	dotnet add reference ../Core
+	cd ..
+
+====== 
+
+
+
+Infrastructure.csproj => after 
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	  </PropertyGroup>
+	  <ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.0-preview.8.20407.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.0-preview.8.20407.4" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.0-preview.8.20407.4" />
+	  </ItemGroup>
+	  <ItemGroup>
+		<ProjectReference Include="..\Core\Core.csproj" />
+	  </ItemGroup>
+	</Project>
+
+
+or 
+
+Infrastructure.csproj => after 
+
+	<Project Sdk="Microsoft.NET.Sdk">
+	  <PropertyGroup>
+		<TargetFramework>netcoreapp5.0</TargetFramework>
+	  </PropertyGroup>
+	  <ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.1" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.1" />
+	  </ItemGroup>
+	  <ItemGroup>
+		<ProjectReference Include="..\Core\Core.csproj" />
+	  </ItemGroup>
+	</Project>
+	
+=======================
+cmd => Saaf => 
+
+Save all
+
+
+cmd => Saaf => 
+	dotnet restore	
+
+cmd => Saaf => 
+
+Save all
+
+=============
+git add .
+git commit -m "Add EntityFrameworkCore, Sqlite, Tools and Core reference in Infrastructure"
+git push	
+
+=====================
+
+If wrong git push then 
+
+cmd => Saaf => git reset --hard <previous number>
+
+	git reset --hard 6b7a1a5e0e1c2df9a525aae1531b3dc95c9099a0
+	git push --force
+
+==================
+	
