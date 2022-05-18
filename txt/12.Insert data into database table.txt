@@ -1,0 +1,34 @@
+vscode => install SQLite and SQLTools SQLite 
+
+press F1 =>
+SQLite: Open Database =>
+saaf.db => 
+================ 
+SQLiteExplorer => 
+saaf.db => 
+right click on Products => show table 	
+=========
+Products => right click => New Query[Insert]
+Before
+	-- SQLite
+	INSERT INTO `Products` (Id, Name)
+	VALUES ();
+===	
+after
+	-- SQLite
+	INSERT INTO `Products` (Id, Name)
+	VALUES (1, 'Product one'), (2, 'Product two'), (3, 'Product three');
+====
+select all => right click => Run Query
+====
+SQLiteExplorer => 
+saaf.db => 
+right click on Products => show table 
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+

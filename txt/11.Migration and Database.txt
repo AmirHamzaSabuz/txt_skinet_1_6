@@ -1,0 +1,31 @@
+Saaf =>   cmd =>
+	dotnet tool uninstall --global dotnet-ef
+	//dotnet tool install --global dotnet-ef --version 5.0.0-preview.8.20407.4
+	dotnet tool install --global dotnet-ef --version 5.0.1
+========================== 
+cmd => Saaf =>  
+	dotnet ef migrations add InitialCreate -p Infrastructure -s API -o DataMigrations 
+	//dotnet     ef migrations     add InitialCreate     -p Infrastructure     -s API     -o Data/Migrations
+
+	//Don't do
+	dotnet ef migrations remove -p Infrastructure -s API
+	//dotnet     ef migrations     remove     -p Infrastructure     -s API
+	
+	//Don't do
+	dotnet ef migrations add InitialCreate -p Infrastructure -s API -o Data/Migrations 
+	
+	cd API 
+API = 
+	dotnet ef database update 
+
+	cd ..
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+git add .
+git commit -m "migration and database"
+git push
