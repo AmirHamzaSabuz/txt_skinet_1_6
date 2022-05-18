@@ -1,0 +1,292 @@
+1.	StoreContext.cs
+2.	Core/Specifications/ISpecification.cs
+3.	BaseSpecification.cs
+4.	SpecificationEvaluator.cs
+
+5.	IGenericRepository.cs
+6.	GenericRepository.cs
+7.	Helpers/Pagination.cs
+8.	Core/Specifications/ProductSpecParams.cs
+
+9.	ProductsWithTypesAndBrandsSpecification.cs
+10.	Core/Specifications/ProductWithFiltersForCountSpecification.cs
+11.	ProductsController.cs
+12.	Startup.cs
+
+
+StoreContext.cs => after 
+
+	using System.Linq;
+	using System.Reflection;
+	using Core.Entities;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace Infrastructure.Data
+	{
+		public class StoreContext : DbContext
+		{
+			public StoreContext(DbContextOptions<StoreContext> options) : base(options)
+			{
+			}
+			
+			public DbSet<Product> Products { get; set; }
+			public DbSet<ProductBrand> ProductBrands { get; set; }
+			public DbSet<ProductType> ProductTypes { get; set; }
+			
+			
+			protected override void OnModelCreating(ModelBuilder modelBuilder)
+			{
+			
+			
+				base.OnModelCreating(modelBuilder);
+				modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+				
+				
+				
+
+				if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+				{
+					//var entityTypes = modelBuilder.Model.GetEntityTypes()
+					//foreach (var entityType in entityTypes)
+					foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+					{
+						var properties = entityType.ClrType.GetProperties().Where(p => p.PropertyType == typeof(decimal));
+
+						foreach(var property in properties)
+						{
+							modelBuilder.Entity(entityType.Name).Property(property.Name).HasConversion<double>();
+
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+// CLEAR 15 April 2022
+
+Core/Specifications/ISpecification.cs => after 
+
+	using System;
+	using System.Collections.Generic;
+	using System.Linq.Expressions;
+
+	namespace Core.Specifications
+	{
+		public interface ISpecification<T>
+		{
+			Expression<Func<T, bool>> Criteria { get; }
+			List<Expression<Func<T, object>>> Includes { get; }
+			Expression<Func<T, object>> OrderBy { get; }
+			Expression<Func<T, object>> OrderByDescending { get; }
+			
+			int Take {get;}
+			int Skip {get;}
+			bool IsPagingEnabled{get;}
+			
+		}
+	}
+
+
+// CLEAR 26 SEP 2021
+
+Core/Specifications/BaseSpecification.cs => after 
+
+	using System;
+	using System.Collections.Generic;
+	using System.Linq.Expressions;
+
+	namespace Core.Specifications
+	{
+		public class BaseSpecification<T> : ISpecification<T>
+		{
+			public BaseSpecification()
+			{
+
+			}
+			public BaseSpecification(Expression<Func<T, bool>> criteria)
+			{
+				Criteria = criteria;
+
+			}
+						
+			public Expression<Func<T, bool>> Criteria { get; }
+			
+			public List<Expression<Func<T, object>>> Includes { get; } = new List<Expression<Func<T, object>>>();
+			
+			
+
+			public Expression<Func<T, object>> OrderBy { get; private set; }
+
+			public Expression<Func<T, object>> OrderByDescending { get; private set; }
+			
+
+			
+			public int Take { get; private set; }
+
+			public int Skip { get; private set; }
+
+			public bool IsPagingEnabled { get; private set; }
+			
+			
+			
+			
+
+			protected void AddInclude(Expression<Func<T, object>> includeExpression)
+			{
+				Includes.Add(includeExpression);
+			}
+			protected void AddOrderBy(Expression<Func<T, object>> orderByExpression)
+			{
+				OrderBy = orderByExpression;
+			}
+			protected void AddOrderByDescending(Expression<Func<T, object>> orderByDescExpression)
+			{
+				OrderByDescending = orderByDescExpression;
+			}
+			
+			
+			
+			
+
+			protected void ApplyPaging(int skip, int take)
+			{
+				Skip = skip;
+				Take = take;
+				IsPagingEnabled = true;
+			}
+
+		}
+	}
+
+// CLEAR 26 SEP 2021, 15 May 2022
+
+Read BaseEntity.cs from All-3
+
+Infrastructure/Data/SpecificationEvaluator.cs => after 
+
+	using System.Linq;
+	using Core.Entities;
+	using Core.Specifications;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace Infrastructure.Data
+	{
+		public class SpecificationEvaluator<TEntity> where TEntity : BaseEntity
+		{
+			public static IQueryable<TEntity> GetQuery(IQueryable<TEntity> inputQuery, ISpecification<TEntity> spec)
+
+			{
+				var query = inputQuery;
+				if (spec.Criteria != null)
+				{
+					query = query.Where(spec.Criteria);
+				}
+
+				if (spec.OrderBy != null)
+				{
+					query = query.OrderBy(spec.OrderBy);
+				}
+
+				if (spec.OrderByDescending != null)
+				{
+					query = query.OrderByDescending(spec.OrderByDescending);
+				}
+
+				if (spec.IsPagingEnabled)
+				{
+					query = query.Skip(spec.Skip).Take(spec.Take);
+				}
+
+				query = spec.Includes.Aggregate(query, (current, include) => current.Include(include));
+				return query;
+			}
+		}
+	}	
+
+// clear 16 May 2022
+
+
+
+2nd Step
+=======
+
+
+Core/Interfaces/IGenericRepository.cs => after 	
+
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Core.Specifications;
+
+	namespace Core.Interfaces
+	{
+		public interface IGenericRepository<T> where T : BaseEntity
+		{
+			Task<T> GetByIdAsync(int id);
+			Task<IReadOnlyList<T>> ListAllAsync();
+
+
+			Task<T> GetEntityWithSpec(ISpecification<T> spec);
+			Task<IReadOnlyList<T>> ListAsync(ISpecification<T> spec);
+			Task<int> CountAsync(ISpecification<T> spec);
+		}
+	}
+
+
+Infrastructure/Data/GenericRepository.cs => after 
+
+	using System.Collections.Generic;
+	using System.Linq;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Core.Interfaces;
+	using Core.Specifications;
+	using Microsoft.EntityFrameworkCore;
+	namespace Infrastructure.Data
+	{
+		public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
+		{
+			private readonly StoreContext _context;
+			public GenericRepository(StoreContext context)
+			{
+				_context = context;
+			}
+			
+			
+			public async Task<T> GetByIdAsync(int id)
+			{
+				return await _context.Set<T>().FindAsync(id);
+			}
+
+			public async Task<IReadOnlyList<T>> ListAllAsync()
+			{
+				return await _context.Set<T>().ToListAsync();
+			}
+
+			public async Task<T> GetEntityWithSpec(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).FirstOrDefaultAsync();
+			}
+
+			public async Task<IReadOnlyList<T>> ListAsync(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).ToListAsync();
+			}
+
+			public async Task<int> CountAsync(ISpecification<T> spec)
+			{
+				return await ApplySpecification(spec).CountAsync();
+			}
+
+			private IQueryable<T> ApplySpecification(ISpecification<T> spec)
+			{
+				return SpecificationEvaluator<T>.GetQuery(_context.Set<T>().AsQueryable(), spec);
+
+			}
+
+
+		}
+	}
+	
