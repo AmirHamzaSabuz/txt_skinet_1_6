@@ -1,0 +1,313 @@
+
+.gitignore =>
+
+	obj
+	bin
+	appsettings.json
+	*.db
+	*.rdb
+
+If wrong git push then 
+
+cmd => Saaf => git reset --hard <previous number>
+
+	git reset --hard 27228416d8ba3f21fd3c40af932a5db6d09b0723
+	git push --force
+	
+=========
+
+1.	Core/Entities/BaseEntity.cs
+2.	Core/Entities/ProductType.cs
+3.	Core/Entities/ProductBrand.cs
+4.	Product.cs
+5.	Infrastructure/Data/Config/ProductConfiguraion.cs
+6.	Infrastructure/Data/StoreContextSeed.cs
+7.	Program.cs
+8.	Core/Interfaces/IProductRepository.cs
+9.	Infrastructure/Data/ProductRepository.cs
+
+Core/Entities/BaseEntity.cs=> after 
+
+	namespace Core.Entities
+	{
+		public class BaseEntity
+		{
+			public int Id {get; set;}
+			
+		}
+	}
+
+Core/Entities/ProductType.cs => after 
+
+	namespace Core.Entities
+	{
+		public class ProductType : BaseEntity
+		{
+			public string Name {get; set;}
+		}
+	}
+
+Core/Entities/ProductBrand.cs => after 
+
+	namespace Core.Entities
+	{
+		public class ProductBrand : BaseEntity
+		{
+			public string Name {get; set;}
+		}
+	}
+
+
+Product.cs => after 
+
+	namespace Core.Entities
+	{
+		public class Product : BaseEntity
+		{
+			
+			public string Name {get; set;}
+			public string Description {get; set;}
+			public decimal Price {get; set;}
+			public string PictureUrl {get; set;}
+			public ProductType ProductType {get; set;}
+			public int ProductTypeId {get; set;}
+			public ProductBrand ProductBrand {get; set;}
+			public int ProductBrandId {get; set;}
+
+		}
+	}
+
+====
+
+cmd => Saaf => 
+
+	dotnet ef database drop -p Infrastructure -s API 
+	
+	Y
+	
+	dotnet ef migrations remove -p Infrastructure -s API 
+	
+	dotnet ef migrations add InitialCreate -p Infrastructure -s API -o Data/Migrations 
+	
+	
+========
+
+// -p is for project, -s is for startup, -o is for folder 
+
+Data/Config/ProductConfiguraion.cs => after 
+
+	using Core.Entities;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
+	namespace Infrastructure.Data.Config
+	{
+		public class ProductConfiguration : IEntityTypeConfiguration<Product>
+		{
+			public void Configure(EntityTypeBuilder<Product> builder)
+			{
+				builder.Property(p => p.Id).IsRequired();
+				builder.Property(p => p.Name).IsRequired().HasMaxLength(100);
+				builder.Property(p => p.Description).IsRequired().HasMaxLength(180);
+				builder.Property(p =>p.Price).HasColumnType("decimal(18,2)");
+				builder.Property(p =>p.PictureUrl).IsRequired();
+				builder.HasOne(b => b.ProductBrand).WithMany().HasForeignKey(p => p.ProductBrandId);
+				builder.HasOne(t => t.ProductType).WithMany().HasForeignKey(p => p.ProductTypeId);
+			}
+
+		}
+	}
+	
+cmd => Saaf => 
+
+	dotnet ef migrations remove -p Infrastructure -s API
+	
+	dotnet ef migrations add InitialCreate -p Infrastructure -s API -o Data/Migrations
+
+=====
+
+StudentAssets => SeedData => copy three files brands.json, products.json, types.json 
+
+Data => make a new folder named SeedData
+
+SeedData => right click => Reveal in File Explorar => => SeedData => paste here
+
+=====
+
+Infrastructure/Data/StoreContextSeed.cs => after 
+
+	using System;
+	using System.Collections.Generic;
+	using System.IO;
+	using System.Linq;
+	using System.Text.Json;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Microsoft.Extensions.Logging;
+
+	namespace Infrastructure.Data
+	{
+		public class StoreContextSeed
+		{
+			public static async Task SeedAsync(StoreContext context, ILoggerFactory loggerFactory)
+			{
+				try
+				{
+					if(!context.ProductBrands.Any())
+					{
+						var brandsData = File.ReadAllText("../Infrastructure/Data/SeedData/brands.json");
+						var brands = JsonSerializer.Deserialize<List<ProductBrand>>(brandsData);
+						foreach(var item in brands)
+						{
+							context.ProductBrands.Add(item);
+						}
+						await context.SaveChangesAsync();
+					}
+					if(!context.ProductTypes.Any())
+					{
+						var typesData = File.ReadAllText("../Infrastructure/Data/SeedData/types.json");
+						var types = JsonSerializer.Deserialize<List<ProductType>>(typesData);
+						foreach(var item in types)
+						{
+							context.ProductTypes.Add(item);
+						}
+						await context.SaveChangesAsync();
+					}
+					if(!context.Products.Any())
+					{
+						var productsData = File.ReadAllText("../Infrastructure/Data/SeedData/products.json");
+						var products = JsonSerializer.Deserialize<List<Product>>(productsData);
+						foreach(var item in products)
+						{
+							context.Products.Add(item);
+						}
+						await context.SaveChangesAsync();
+					}
+
+				}
+				catch (Exception ex)
+				{
+					var logger = loggerFactory.CreateLogger<StoreContextSeed>();
+					logger.LogError(ex.Message);
+				}
+
+			}
+		}
+	}
+
+
+Program.cs => after 
+
+	using System;
+	using System.Threading.Tasks;
+	using Infrastructure.Data;
+	using Microsoft.AspNetCore.Hosting;
+	using Microsoft.EntityFrameworkCore;
+	using Microsoft.Extensions.DependencyInjection;
+	using Microsoft.Extensions.Hosting;
+	using Microsoft.Extensions.Logging;
+
+	namespace API
+	{
+		public class Program
+		{
+			public static async Task Main(string[] args)
+			{
+				var host = CreateHostBuilder(args).Build();
+				using (var scope = host.Services.CreateScope())
+				{
+					var services = scope.ServiceProvider;
+					var loggerFactory = services.GetRequiredService<ILoggerFactory>();
+					try
+					{
+						var context = services.GetRequiredService<StoreContext>();
+						await context.Database.MigrateAsync();
+						await StoreContextSeed.SeedAsync(context, loggerFactory);
+					}
+					catch(Exception ex)
+					{
+						var logger = loggerFactory.CreateLogger<Program>();
+						logger.LogError(ex, "An error occured during migration");
+					}
+				}
+
+				host.Run();
+
+			}
+
+			public static IHostBuilder CreateHostBuilder(string[] args) =>
+				Host.CreateDefaultBuilder(args)
+					.ConfigureWebHostDefaults(webBuilder =>
+					{
+						webBuilder.UseStartup<Startup>();
+					});
+		}
+	}
+
+
+Core/Interfaces/IProductRepository.cs =>
+
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
+	using Core.Entities;
+
+	namespace Core.Interfaces
+	{
+		public interface IProductRepository
+		{
+			Task<Product> GetProductByIdAsync(int id); 
+			Task<IReadOnlyList<Product>> GetProductsAsync();
+			Task<IReadOnlyList<ProductBrand>> GetProductBrandsAsync();
+			Task<IReadOnlyList<ProductType>> GetProductTypesAsync();
+		}
+	}
+
+
+Infrastructure/Data/ProductRepository.cs
+
+	using System.Collections.Generic;
+	using System.Threading.Tasks;
+	using Core.Entities;
+	using Core.Interfaces;
+	using Microsoft.EntityFrameworkCore;
+
+	namespace Infrastructure.Data
+	{
+		public class ProductRepository : IProductRepository
+		{
+			private readonly StoreContext _context;
+			public ProductRepository(StoreContext context)
+			{
+				_context = context;
+
+			}
+
+
+			public async Task<Product> GetProductByIdAsync(int id)
+			{
+				return await _context.Products
+				.Include(p => p.ProductBrand)
+				.Include(p => p.ProductType)
+				.FirstOrDefaultAsync(p => p.Id == id);
+			}
+
+			public async Task<IReadOnlyList<Product>> GetProductsAsync()
+			{
+				return await _context.Products
+				.Include(p => p.ProductBrand)
+				.Include(p => p.ProductType)
+				.ToListAsync();
+			}
+
+			
+			public async Task<IReadOnlyList<ProductBrand>> GetProductBrandsAsync()
+			{
+				return await _context.ProductBrands.ToListAsync();
+			}
+
+			public async Task<IReadOnlyList<ProductType>> GetProductTypesAsync()
+			{
+				return await _context.ProductTypes.ToListAsync();
+			}
+		}
+	}	
