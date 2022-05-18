@@ -1,0 +1,60 @@
+Core => make a new folder named Entities
+Core/Entities=> make a new C# class named Product.cs 
+Core/Entities/Product.cs => before 
+
+	namespace Core.Entities
+	{
+		public class Product
+		{
+		}
+	}
+===
+Core/Entities/Product.cs => after 
+
+	namespace Core.Entities
+	{
+		public class Product
+		{
+			public int Id { get; set; }
+			public string Name { get; set; }
+		}
+	}	
+	
+===========================================
+
+Infrastructure => make a new folder Data
+Infrastructure/Data=> make a new C# class named StoreContext.cs 
+
+Infrastructure/Data/StoreContext.cs => before 
+
+	namespace Infrastructure.Data
+	{
+		public class StoreContext
+		{	}
+	}
+===
+Infrastructure/Data/StoreContext.cs => after 
+
+	using Core.Entities;
+	using Microsoft.EntityFrameworkCore;
+	
+	namespace Infrastructure.Data
+	{
+		public class StoreContext : DbContext
+		{
+			public StoreContext(DbContextOptions<StoreContext> options) : base(options)
+			{
+			}
+			public DbSet<Product> Products { get; set; }
+		}
+	}
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+git add .
+git commit -m "Created Core/Entities/Product.cs and Infrastructure/Data/StoreContext.cs"
+git push

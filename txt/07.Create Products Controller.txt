@@ -1,0 +1,57 @@
+
+Controllers => add new C# class ProductsController.cs
+ProductsController.cs => before 
+	namespace API.Controllers
+	{
+		public class ProductsController
+		{	
+		}
+	}
+===
+ProductsController.cs => after 
+	using Microsoft.AspNetCore.Mvc;
+	namespace API.Controllers
+	{
+			[ApiController]
+			[Route("api/[controller]")]
+			public class ProductsController : ControllerBase 
+			{
+				[HttpGet]
+				public string GetProducts()
+				{
+					return "this will be a list of products";
+				}
+				[HttpGet("{id}")]
+				public string GetProduct(int id)
+				{ 
+					return "single product"; 
+				}
+			}
+	}
+=========================
+
+cmd => Saaf =>  
+	cd API
+API => cmd => 
+	dotnet watch run 
+
+https://localhost:5001/api/products     => this will be a list of products
+https://localhost:5001/api/products/1   => single product
+
+ctrl+c
+
+cd ..
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+git add .
+git commit -m "Create Products Controller"
+git push 
+
+================
+
+

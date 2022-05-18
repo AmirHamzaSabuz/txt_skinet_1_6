@@ -1,0 +1,34 @@
+appsettings.Development.json => before 
+	{
+	  "Logging": {
+		"LogLevel": {
+		  "Default": "Information",
+		  "Microsoft": "Warning",
+		  "Microsoft.Hosting.Lifetime": "Information"
+		}
+	  }
+	}
+===
+appsettings.Development.json => after 
+	{
+	  "Logging": {
+		"LogLevel": {
+		  "Default": "Information",
+		  "Microsoft": "Warning",
+		  "Microsoft.Hosting.Lifetime": "Information"
+		}
+	  },
+	  "ConnectionStrings": {
+		"DefaultConnection": "Data source=saaf.db"
+	  }
+	}
+
+cmd => Saaf => 
+
+Save all
+
+=============
+
+git add . 
+git commit -m "appsettings.Development.json ConnectionStrings"
+git push 
